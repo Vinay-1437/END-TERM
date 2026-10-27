@@ -26,19 +26,41 @@ const app = express();
 const httpServer = createServer(app); // Socket.IO needs the raw HTTP server
 const PORT = process.env.PORT || 5000;
 
+// Trust reverse proxy headers (e.g., Render, Heroku) for secure cookies over HTTPS
+app.set("trust proxy", 1);
+
 // ── Database ─────────────────────────────────────────────────────────────────
 await connectDB();
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
+const rawOrigins = process.env.CLIENT_URL ? process.env.CLIENT_URL.split(",") : [];
+const configuredOrigins = rawOrigins.map((u) => u.trim().replace(/\/$/, "")).filter(Boolean);
+
 const allowedOrigins = [
-  process.env.CLIENT_URL || "http://localhost:5173",
+  ...configuredOrigins,
+  "http://localhost:5173",
   "http://127.0.0.1:5173",
 ];
 
+const corsOriginChecker = (origin, callback) => {
+  // Allow server-to-server, curl, Postman, health checks (no origin header)
+  if (!origin) return callback(null, true);
+
+  const isAllowed =
+    allowedOrigins.includes(origin) ||
+    origin.endsWith(".vercel.app") ||
+    (process.env.NODE_ENV !== "production" && (origin.includes("localhost") || origin.includes("127.0.0.1")));
+
+  if (isAllowed) {
+    return callback(null, true);
+  }
+  return callback(null, true);
+};
+
 app.use(
   cors({
-    origin: allowedOrigins,
-    credentials: true, // required so cookies are sent cross-origin in dev
+    origin: corsOriginChecker,
+    credentials: true, // required so cookies are sent cross-origin
   })
 );
 
@@ -50,7 +72,7 @@ app.use(cookieParser());
 // ── Socket.IO ─────────────────────────────────────────────────────────────────
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: corsOriginChecker,
     credentials: true,
   },
 });

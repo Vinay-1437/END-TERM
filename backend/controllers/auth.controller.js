@@ -74,10 +74,12 @@ export const login = asyncHandler(async (req, res) => {
 
 // POST /api/auth/logout
 export const logout = asyncHandler(async (req, res) => {
+  const isProduction = process.env.NODE_ENV === "production";
+
   res.clearCookie("token", {
     httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    sameSite: isProduction ? "none" : "lax",
+    secure: isProduction,
   });
 
   res.status(200).json({

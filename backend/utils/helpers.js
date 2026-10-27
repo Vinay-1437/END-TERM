@@ -12,10 +12,12 @@ export const setAuthCookie = (res, userId) => {
     expiresIn: "7d",
   });
 
+  const isProduction = process.env.NODE_ENV === "production";
+
   res.cookie("token", token, {
     httpOnly: true,         // Prevent JS access — XSS protection
-    secure: process.env.NODE_ENV === "production", // HTTPS only in production
-    sameSite: "lax",        // CSRF protection while allowing normal navigation
+    secure: isProduction,   // HTTPS only in production (required for sameSite: "none")
+    sameSite: isProduction ? "none" : "lax", // "none" required for cross-domain cookie sharing (Render <-> Vercel)
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
   });
 };
