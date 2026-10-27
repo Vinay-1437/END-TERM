@@ -1,0 +1,11 @@
+node_modules/
+.env
+dist/
+build/
+*.log
+.DS_Store
+Thumbs.db
+
+# Environment files may contain credentials; keep only the template tracked
+.env*
+!.env.example
